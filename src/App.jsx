@@ -1,10 +1,16 @@
 import { useCallback, useState } from 'react'
+import { getDatabase , ref , set } from "firebase/database";
+import { app } from "./firebase";
+
+const db = getDatabase(app);
 
 function App() {
 
   const [quote, setQuote] = useState('Click the New Quote button to Generate a quote');
   const [author, setAuthor] = useState('');
   const [copy, setCopy] = useState('Copy');
+  const [save, setSave] = useState('Save');
+  
 
   const getQuote = useCallback(() => {
     let url = 'https://gist.githubusercontent.com/camperbot/5a022b72e96c4c9585c32bf6a75f62d9/raw/e3c6895ce42069f0ee7e991229064f167fe8ccdc/quotes.json';
@@ -18,8 +24,9 @@ function App() {
 
       setQuote(randomQuote.quote);
       setAuthor(':' + randomQuote.author);
+      setSave('Save');
     })
-  }, [setAuthor, setQuote]);
+  }, [setAuthor, setQuote, setSave]);
 
   const copyQuote = useCallback(() => {
     quote.current?.select();
@@ -27,6 +34,30 @@ function App() {
     window.navigator.clipboard.writeText(quote);
     setCopy('Copied')
   }, []);
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Shared Quote',
+          text: quote,
+        });
+      } else {
+        throw new Error('Web Share API is not supported in this browser.');
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  const SaveQuote = () => {
+    set(ref(db, "User/Quotes" ), {
+      Quote: quote,
+      Author: author
+    });
+    alert("Quote Saved!");
+    setSave('Saved')
+  } ;
 
   return (
     <>
@@ -38,8 +69,8 @@ function App() {
               <div className="buttons flex justify-between ">
                 <div className='mt-1'>
                 <button className='p-1 m-1 bg-blue-800 text-white rounded-md shadow-md hover:bg-blue-700' title='Copy' onClick={copyQuote}>{copy}</button>
-                <button className='p-1 m-1 bg-blue-800 text-white rounded-md shadow-md hover:bg-blue-700' title='Share'>Share</button>
-                <button className='p-1 m-1 bg-blue-800 text-white rounded-md shadow-md hover:bg-blue-700' title='Save'>Save</button>
+                <button className='p-1 m-1 bg-blue-800 text-white rounded-md shadow-md hover:bg-blue-700' title='Share' onClick={handleShare}>Share</button>
+                <button className='p-1 m-1 bg-blue-800 text-white rounded-md shadow-md hover:bg-blue-700' title='Save' onClick={SaveQuote}>{save}</button>
                 </div>
                 <button className='p-2 m-1 bg-blue-800 text-white rounded-md shadow-md hover:bg-blue-700' 
                 title='New Quote' onClick={getQuote}>New Quote</button>
